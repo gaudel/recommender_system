@@ -115,7 +115,7 @@ class EpsilonNGreedy:
         self.nb_trials = np.zeros(nb_arms, dtype=np.uint)
 
     def label(self):
-        return "$\\epsilon_n$-Greedy, a=%.3f" % (self.a)
+        return "$\\epsilon_n$-Greedy, c=%.3f" % (self.c)
 
 
 class UCB1:
@@ -123,7 +123,8 @@ class UCB1:
     Player which plays the arm with the highest confidence upper confidence bound
     """
 
-    def __init__(self, nb_arms):
+    def __init__(self, nb_arms, alpha=1.):
+        self.alpha = alpha
         pass # XXX TO DO XXX
 
     def choose_next_arm(self, epsilon=10**(-5)):

@@ -2,46 +2,14 @@
 # ===========================
 
 import numpy as np
-import player
-import arm
 import matplotlib.pyplot as plt
 from math import floor
-from random import shuffle
-from copy import deepcopy
+from play_games import play_games
+
 
 # =============================
-# tools
+# Tools
 # =============================
-
-def games(player, arms, nb_trials, nb_games):
-    """
-    Play one game and return stored informations
-
-    :param player:
-    :param arms:
-    :param nb_trials:
-    :param nb_games:
-    :return:
-    """
-    best_mean = max([a.mean() for a in arms])
-    chosen_arm = np.zeros((nb_games, nb_trials))
-    reward = np.zeros((nb_games, nb_trials))
-    expected_reward = np.zeros((nb_games, nb_trials))
-    expected_best_reward = np.zeros((nb_games, nb_trials))
-    for game in range(nb_games):
-        player_for_one_game = deepcopy(player)
-        for t in range(nb_trials):
-            # play one turn
-            i = player_for_one_game.choose_next_arm()
-            # print("%d\t%f" % (i, arms[i].mean()))
-            rew = arms[i].draw()
-            player_for_one_game.update(i, rew)
-            # store informations
-            chosen_arm[game, t] = i
-            reward[game, t] = rew
-            expected_reward[game, t] = arms[i].mean()
-            expected_best_reward[game, t] = best_mean
-    return {'chosen_arm': chosen_arm, 'reward': reward, 'expected_reward': expected_reward, 'expected_best_reward': expected_best_reward}
 
 def cumulative_reward(logs):
     """
@@ -51,13 +19,15 @@ def cumulative_reward(logs):
     """
     return np.mean(np.cumsum(logs['reward'], axis=1), axis=0)
 
+
 def cumulative_regret(logs):
     """
     compute average cumulative regret
     :param logs:
     :return:
     """
-    return np.mean(np.cumsum(logs['expected_best_reward']-logs['expected_reward'], axis=1), axis=0)
+    return np.mean(np.cumsum(logs['expected_best_reward'] - logs['reward'], axis=1), axis=0)
+
 
 def nb_times_best__dist(logs):
     """
@@ -67,6 +37,7 @@ def nb_times_best__dist(logs):
     """
     return np.sum(logs['expected_best_reward'] == logs['expected_reward'], axis=1)
 
+
 def logarithmic_indices(stop, n):
     """
     returns n indices logarithmically spanned from 0 to stop-1
@@ -74,87 +45,104 @@ def logarithmic_indices(stop, n):
     :param n:
     :return:
     """
-    return np.unique([floor(np.exp(i/(n-1)*np.log(stop)))-1 for i in range(n)])
+    return np.unique([floor(np.exp(i / (n - 1) * np.log(stop))) - 1 for i in range(n)])
 
 
+# =============================
+# Plots
+# =============================
+
+def print_cum_rew(logs, T=None):
+    if logs[0]['reward'].shape[0] == 1:
+        print("Cumulative Reward at time-stamp %d" % (logs[0]['reward'].shape[1]))
+        for log in logs:
+            print("%15s     %0.2f" % (log['label'], np.sum(log['reward'][:, :T], axis=1)[0]))
+    else:
+        print("Cumulative Reward at time-stamp %d (in average)" % (logs[0]['reward'].shape[1]))
+        for log in logs:
+            vals = np.sum(log['reward'][:, :T], axis=1)
+            print(
+                "%15s     mean: %0.2f\t min: %0.2f\t max: %0.2f" % (log['label'], vals.mean(), vals.min(), vals.max()))
 
 
-if __name__ == '__main__':
-    # =============================
-    # play games
-    # =============================
-    arms = [arm.Bernoulli(p) for p in [0.2, 0.5]]
-    nb_trials = 300
-    nb_games = 100
-
-    logs_oracle = games(player.Oracle(np.argmax([a.mean() for a in arms])), arms, nb_trials, nb_games)
-    logs_ETC10 = games(player.ExploreThenCommit(len(arms), 10), arms, nb_trials, nb_games)
-    logs_ETC40 = games(player.ExploreThenCommit(len(arms), 40), arms, nb_trials, nb_games)
-    logs_ETC200 = games(player.ExploreThenCommit(len(arms), 200), arms, nb_trials, nb_games)
-
-    # =============================
-    # plot graphics
-    # =============================
-
-    # Cumulative Reward at time-step 300
-    print("Cumulative Reward at time-step 300 (in average)")
-    print("Oracle: \t", np.mean(np.sum(logs_oracle['reward'], axis=1)))
-    print("ETC 10: \t", np.mean(np.sum(logs_ETC10['reward'], axis=1)))
-    print("ETC 40: \t", np.mean(np.sum(logs_ETC40['reward'], axis=1)))
-    print("ETC 200: \t", np.mean(np.sum(logs_ETC200['reward'], axis=1)))
-
-    # - Cumulative reward = f(t) -
-    plt.clf()
-    inds = logarithmic_indices(nb_trials, 100)
-    plt.plot(inds + 1, cumulative_reward(logs_oracle)[inds], label='Oracle')
-    plt.plot(inds + 1, cumulative_reward(logs_ETC10)[inds], "--", label='A/B, m = 10')
-    plt.plot(inds + 1, cumulative_reward(logs_ETC40)[inds], "--", label='A/B, m = 40')
-    plt.plot(inds + 1, cumulative_reward(logs_ETC200)[inds], "--", label='A/B, m = 200')
+def plot_cum_reg(logs, subplot=False, T=None):
+    if subplot:
+        plt.subplot(1, 2, 1)
+    else:
+        plt.clf()
+    inds = logarithmic_indices(logs[0]['reward'][:, :T].shape[1], 100)
+    for i_p, log in enumerate(logs):
+        plt.plot(inds + 1, cumulative_regret(log)[inds], label=log['label'], color='C' + str(i_p % 10))
     plt.xlabel('Time')
-    plt.ylabel('Expected Cumulative Reward')
+    plt.ylabel('Average Cumulative Regret')
     plt.legend()
     plt.grid(True)
-    plt.show()
+    if not subplot:
+        plt.show()
 
-    # - Cumulative regret = f(t) -
-    plt.clf()
-    inds = logarithmic_indices(nb_trials, 100)
-    plt.plot(inds + 1, cumulative_regret(logs_oracle)[inds], label='Oracle')
-    plt.plot(inds + 1, cumulative_regret(logs_ETC10)[inds], "--", label='A/B, m = 10')
-    plt.plot(inds + 1, cumulative_regret(logs_ETC40)[inds], "--", label='A/B, m = 40')
-    plt.plot(inds + 1, cumulative_regret(logs_ETC200)[inds], "--", label='A/B, m = 200')
-    plt.xlabel('Time')
-    plt.ylabel('Expected Cumulative Regret')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
 
-    # - hist(Cumulative reward) -
-    plt.clf()
-    plt.hist(np.sum(logs_oracle['reward'], axis=1), 40, range=(0, 200), density=False, facecolor='r', alpha=0.75,
-             label='Oracle')
-    plt.hist(np.sum(logs_ETC10['reward'], axis=1), 40, range=(0, 200), density=False, facecolor='g', alpha=0.75,
-             label='A/B, m = 10')
-    plt.hist(np.sum(logs_ETC40['reward'], axis=1), 40, range=(0, 200), density=False, facecolor='b', alpha=0.75,
-             label='A/B, m = 40')
+def hist_cum_reg(logs, subplot=False, logscale=False, xlim=None, T=None):
+    # --- Compute common slices ---
+    v_min = np.inf
+    v_max = -np.inf
+    for log in logs:
+        v_min = min(v_min, np.sum(log['reward'][:, :T], axis=1).min())
+        v_max = max(v_min, np.sum(log['reward'][:, :T], axis=1).max())
+    nb_bins = min(max(logs[0]['reward'][:, :T].shape[0] // 5, 10), 100)
+    bins = np.linspace(v_min, v_max + 0.00000001, nb_bins)
+
+    # --- Draw histogram ---
+    if subplot:
+        plt.subplot(1, 2, 2)
+    else:
+        plt.clf()
+    for i_p, log in enumerate(logs):
+        plt.hist(np.sum(log['reward'][:, :T], axis=1), bins=bins, density=False, label=log['label'],
+                 facecolor='C' + str(i_p % 10), alpha=0.75, log=logscale)
     plt.xlabel('Cumulative Reward')
     plt.ylabel('Frequency')
     plt.legend()
+    if not xlim is None:
+        plt.xlim(xlim)
     plt.grid(True)
-    plt.show()
+    if not subplot:
+        plt.show()
 
-    # - hist(#time-steps optimal option is chosen) -
-    plt.clf()
-    plt.hist(nb_times_best__dist(logs_oracle), 40, range=(0, nb_trials), density=False, facecolor='r', alpha=0.75,
-             label='Oracle')
-    plt.hist(nb_times_best__dist(logs_ETC10), 40, range=(0, nb_trials), density=False, facecolor='g', alpha=0.75,
-             label='A/B, m = 10')
-    plt.hist(nb_times_best__dist(logs_ETC40), 40, range=(0, nb_trials), density=False, facecolor='b', alpha=0.75,
-             label='A/B, m = 40')
-    plt.xlabel('#time-steps')
-    plt.ylabel('Frequency')
-    # plt.title('Histogram of IQ')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
 
+def plot_exp(logs, T=None, hist_xlim=None, hist_logscale=False):
+    """
+    Plot results as in the Notebook
+
+    :param logs:
+    :return:
+    """
+    print_cum_rew(logs, T=T)
+    if logs[0]['reward'].shape[0] == 1:
+        plot_cum_reg(logs, T=T)
+    else:
+        plt.clf()
+        plt.figure(figsize=(13, 4.8))
+        plot_cum_reg(logs, subplot=True, T=T)
+        hist_cum_reg(logs, subplot=True, logscale=hist_logscale, xlim=hist_xlim, T=T)
+        plt.show()
+
+
+# =============================
+# play_games
+# =============================
+
+def run_exp(players, arms, nb_trials, nb_games):
+    """
+    Play one game and return stored information
+
+    :param players:
+    :param arms:
+    :param nb_trials:
+    :param nb_games:
+    :return:
+    """
+    plot_exp(play_games(players, arms, nb_trials, nb_games))
+
+
+if __name__ == '__main__':
+    pass

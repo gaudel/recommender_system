@@ -9,7 +9,7 @@ Usage:
                     | --Oracle
                     | --EtC <m>
                     | --EtFtL <m>
-                    | --eGreedy <a>
+                    | --eGreedy <c>
                     | --UCB [<alpha>]
                     | --TS
                 )
@@ -97,11 +97,11 @@ if __name__ == "__main__":
         players = [Oracle(np.argmax([arm.mean() for arm in arms]))]
         file_name += 'Oracle'
     elif arguments['--EtC']:
-        players = [ExploreThenCommit(nb_arms=nb_arms, m=int(arguments['<m>']))]
+        players = [ExploreThenCommit(nb_arms=nb_arms, n0=int(arguments['<m>']))]
         file_name += 'EtC__m_' + arguments['<m>']
     elif arguments['--eGreedy']:
-        players = [EpsilonNGreedy(nb_arms=nb_arms, a=float(arguments['<a>']))]
-        file_name += 'eGreedy__a_' + arguments['<a>']
+        players = [EpsilonNGreedy(nb_arms=nb_arms, c=float(arguments['<a>']))]
+        file_name += 'eGreedy__c_' + arguments['<c>']
     elif arguments['--UCB']:
         players = [UCB1(nb_arms=nb_arms, alpha=float(arguments['<alpha>']))]
         file_name += 'UCB__alpha_' + arguments['<alpha>']
