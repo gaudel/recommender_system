@@ -100,7 +100,7 @@ if __name__ == "__main__":
         players = [ExploreThenCommit(nb_arms=nb_arms, n0=int(arguments['<m>']))]
         file_name += 'EtC__m_' + arguments['<m>']
     elif arguments['--eGreedy']:
-        players = [EpsilonNGreedy(nb_arms=nb_arms, c=float(arguments['<a>']))]
+        players = [EpsilonNGreedy(nb_arms=nb_arms, c=float(arguments['<c>']))]
         file_name += 'eGreedy__c_' + arguments['<c>']
     elif arguments['--UCB']:
         players = [UCB1(nb_arms=nb_arms, alpha=float(arguments['<alpha>']))]
