@@ -21,6 +21,12 @@ class Random:
     def update(self, arm, reward):
         pass
 
+    def restart(self):
+        pass
+
+    def label(self):
+        return "Random"
+
 
 class Oracle:
     """
@@ -38,6 +44,9 @@ class Oracle:
 
     def restart(self):
         pass
+
+    def label(self):
+        return "Oracle"
 
 
 class ExploreThenCommit:
@@ -73,6 +82,9 @@ class ExploreThenCommit:
         self.nb_trials = np.zeros(nb_arms, dtype=np.uint)
         self.winner = -1
 
+    def label(self):
+        return "EtC, n0=%d" % (self.n0)
+
 
 class EpsilonNGreedy:
     """
@@ -102,6 +114,9 @@ class EpsilonNGreedy:
         self.cum_reward = np.zeros(nb_arms)
         self.nb_trials = np.zeros(nb_arms, dtype=np.uint)
 
+    def label(self):
+        return "$\\epsilon_n$-Greedy, a=%.3f" % (self.a)
+
 
 class UCB1:
     """
@@ -119,6 +134,10 @@ class UCB1:
 
     def restart(self):
         pass # XXX TO DO XXX
+
+    def label(self):
+        return "UCB, $\\alpha$=%.3f" % (self.alpha)
+
 
 
 class ThompsonSamplingBernoulli:
@@ -146,4 +165,6 @@ class ThompsonSamplingBernoulli:
         self.success = np.ones(nb_arms, dtype=np.uint)*self.prior_s
         self.failure = np.ones(nb_arms, dtype=np.uint)*self.prior_f
 
+    def label(self):
+        return "TS"
 
